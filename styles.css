@@ -330,6 +330,52 @@ main { padding: var(--section-space) 0 clamp(3rem, 7vw, 5rem); }
   gap: 9px;
 }
 
+.inference-summary {
+  margin: 14px 0 -6px;
+  padding: 8px 11px;
+  color: #59667c;
+  border-left: 3px solid #8dabf0;
+  border-radius: 0 7px 7px 0;
+  background: #f1f5fd;
+  font-size: .72rem;
+}
+
+.inference-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  margin: 14px 0 -6px;
+  padding: 12px 14px;
+  color: #7e2f25;
+  border: 1px solid #efc2b9;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #fff5f3, #ffefec);
+  box-shadow: 0 5px 16px rgba(126, 47, 37, .07);
+}
+
+.inference-error[hidden] { display: none; }
+
+.inference-error__icon {
+  display: grid;
+  flex: 0 0 auto;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  color: #fff;
+  border-radius: 50%;
+  background: #c65443;
+  font-size: .78rem;
+  font-weight: 900;
+}
+
+.inference-error strong { display: block; font-size: .82rem; }
+
+.inference-error p {
+  margin: 2px 0 0;
+  color: #92554c;
+  font-size: .74rem;
+}
+
 .roll-analyzer__intro > p:last-child {
   margin: 4px 0 0;
   color: var(--muted);

@@ -84,6 +84,14 @@
           </div>
         </div>
       </div>
+      <p class="inference-summary" id="inference-summary">Auto stage detection prefers three total rolls and resolves overlaps toward the lower stage.</p>
+      <div class="inference-error" id="inference-error" role="alert" hidden>
+        <span class="inference-error__icon" aria-hidden="true">!</span>
+        <div>
+          <strong>Roll total exceeds the rune limit</strong>
+          <p id="inference-error-message">Review the entered values or manually selected stages.</p>
+        </div>
+      </div>
       <div class="analyzer-slots" id="analyzer-slots" aria-live="polite"></div>
       <aside class="overall-evaluation" aria-labelledby="overall-evaluation-title">
         <div class="overall-evaluation__summary">

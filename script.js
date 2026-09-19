@@ -7,6 +7,9 @@ const categoryButtons = document.querySelectorAll(".category-button");
 const runeModeButtons = document.querySelectorAll("[data-rune-mode]");
 const analyzerModeButtons = document.querySelectorAll("[data-analyzer-mode]");
 const analyzerSlotsContainer = document.querySelector("#analyzer-slots");
+const inferenceSummary = document.querySelector("#inference-summary");
+const inferenceError = document.querySelector("#inference-error");
+const inferenceErrorMessage = document.querySelector("#inference-error-message");
 const overallScore = document.querySelector("#overall-score");
 const overallGrade = document.querySelector("#overall-grade");
 const overallBar = document.querySelector("#overall-bar");
@@ -16,16 +19,18 @@ const overallContext = document.querySelector("#overall-context");
 const overallCount = document.querySelector("#overall-count");
 const ANALYZER_SLOT_COUNT = 4;
 const ROLL_STAGES = [
-  { label: "Base", multiplier: 1 },
-  { label: "1 roll", multiplier: 2 },
-  { label: "2 rolls", multiplier: 3 },
-  { label: "3 rolls", multiplier: 4 },
-  { label: "4 rolls", multiplier: 5 }
+  { label: "Base", rolls: 0, multiplier: 1 },
+  { label: "1 roll", rolls: 1, multiplier: 2 },
+  { label: "2 rolls", rolls: 2, multiplier: 3 },
+  { label: "3 rolls", rolls: 3, multiplier: 4 },
+  { label: "4 rolls", rolls: 4, multiplier: 5 }
 ];
 let activeCategory = "all";
 let activeRuneMode = "normal";
 let activeAnalyzerRuneMode = "normal";
 let loadedStats = [];
+let inferenceBlocked = false;
+let inferenceMinimumTotal = 0;
 
 function parseNumber(value) {
   const normalized = value?.trim();
@@ -172,6 +177,17 @@ function updateOverallEvaluation() {
 
   overallCount.textContent = `${validScores.length} of ${ANALYZER_SLOT_COUNT} stats`;
 
+  if (inferenceBlocked) {
+    overallScore.textContent = "—";
+    overallGrade.textContent = "Evaluation blocked";
+    overallGrade.dataset.rated = "false";
+    overallBarFill.style.width = "0%";
+    overallBarMarker.style.left = "0%";
+    overallBar.setAttribute("aria-valuenow", "0");
+    overallContext.textContent = `Overall grading is unavailable because the minimum valid combination requires ${inferenceMinimumTotal} rolls.`;
+    return;
+  }
+
   if (validScores.length === 0) {
     overallScore.textContent = "—";
     overallGrade.textContent = "Not rated";
@@ -203,7 +219,7 @@ function createAnalyzerSlot(slotIndex) {
   const article = document.createElement("article");
   article.className = "analyzer-card";
   article.dataset.analyzerSlot = String(slotIndex);
-  const stageOptions = ROLL_STAGES.map(stage =>
+  const stageOptions = `<option value="auto">Auto &middot; Base</option>` + ROLL_STAGES.map(stage =>
     `<option value="${stage.multiplier}">${stage.label}</option>`).join("");
   article.innerHTML = `
     <div class="analyzer-card__heading">
@@ -273,32 +289,156 @@ function refreshAnalyzerOptions() {
 function setAnalyzerSlotAverage(slot) {
   const { statSelect, stageSelect, valueInput } = analyzerElements(slot);
   const stat = statSelect.value === "" ? null : loadedStats[Number(statSelect.value)];
-  const multiplier = Number(stageSelect.value);
+  const multiplier = stageSelect.value === "auto" ? 1 : Number(stageSelect.value);
   if (!stat || !ROLL_STAGES.some(stage => stage.multiplier === multiplier)) {
     valueInput.value = "";
-    updateAnalyzerSlot(slot);
+    updateAllAnalyzerSlots();
     return;
   }
   const singleRollAverage = Math.floor((stat.min + getEffectiveMax(stat, activeAnalyzerRuneMode)) / 2);
   valueInput.value = String(singleRollAverage * multiplier);
-  updateAnalyzerSlot(slot);
+  updateAllAnalyzerSlots();
 }
 
-function updateAnalyzerSlot(slot, refreshOverall = true) {
+function feasibleStagesForValue(stat, actual) {
+  return ROLL_STAGES.filter(stage => {
+    const minimum = stat.min * stage.multiplier;
+    const maximum = getEffectiveMax(stat, activeAnalyzerRuneMode) * stage.multiplier;
+    return actual >= minimum && actual <= maximum;
+  });
+}
+
+function stageFitCost(stat, actual, stage) {
+  const minimum = stat.min * stage.multiplier;
+  const maximum = getEffectiveMax(stat, activeAnalyzerRuneMode) * stage.multiplier;
+  const average = Math.floor((stat.min + getEffectiveMax(stat, activeAnalyzerRuneMode)) / 2) * stage.multiplier;
+  return Math.abs(actual - average) / Math.max(1, maximum - minimum);
+}
+
+function inferAnalyzerStages() {
+  const slots = [...document.querySelectorAll(".analyzer-card")];
+  const assignments = new Map();
+  inferenceBlocked = false;
+  inferenceMinimumTotal = 0;
+  inferenceError.hidden = true;
+  const items = slots.map(slot => {
+    const elements = analyzerElements(slot);
+    const stat = elements.statSelect.value === "" ? null : loadedStats[Number(elements.statSelect.value)];
+    const rawValue = elements.valueInput.value.trim();
+    const actual = /^\d+$/.test(rawValue) ? Number(rawValue) : NaN;
+    if (!stat || !Number.isSafeInteger(actual)) return null;
+
+    const feasible = feasibleStagesForValue(stat, actual);
+    const isAuto = elements.stageSelect.value === "auto";
+    const manualStage = isAuto ? null
+      : ROLL_STAGES.find(stage => stage.multiplier === Number(elements.stageSelect.value));
+    const possibilities = isAuto ? feasible
+      : manualStage && feasible.includes(manualStage) ? [manualStage] : [];
+    const fallback = isAuto ? feasible[0] : manualStage;
+    if (fallback) assignments.set(slot, fallback);
+    return { slot, stat, actual, isAuto, possibilities };
+  }).filter(Boolean);
+
+  const allEnteredValuesHaveStages = items.every(item => item.possibilities.length > 0);
+  if (items.length > 0 && allEnteredValuesHaveStages) {
+    inferenceMinimumTotal = items.reduce((sum, item) =>
+      sum + Math.min(...item.possibilities.map(stage => stage.rolls)), 0);
+
+    if (inferenceMinimumTotal > 4) {
+      inferenceBlocked = true;
+      inferenceErrorMessage.textContent = `These values require at least ${inferenceMinimumTotal} total rolls, but a rune can have no more than 4. Lower a value or correct a manually selected stage.`;
+      inferenceError.hidden = false;
+      inferenceSummary.textContent = `Unable to form a valid rune: minimum ${inferenceMinimumTotal} rolls required.`;
+      return assignments;
+    }
+  }
+
+  if (items.length !== ANALYZER_SLOT_COUNT || items.some(item => item.possibilities.length === 0)) {
+    const hasImpossibleValue = items.some(item => item.isAuto && item.possibilities.length === 0);
+    const hasManualConflict = items.some(item => !item.isAuto && item.possibilities.length === 0);
+    inferenceSummary.textContent = hasImpossibleValue
+      ? "One or more values do not fit any stage; other auto stages use the lower match."
+      : hasManualConflict
+        ? "A selected manual stage conflicts with its value; other auto stages use the lower match."
+        : "Auto stages use the lower valid match until all four stats have valid values.";
+    return assignments;
+  }
+
+  const combinations = [];
+  function buildCombination(index, stages) {
+    if (index === items.length) {
+      const totalRolls = stages.reduce((sum, stage) => sum + stage.rolls, 0);
+      const cost = stages.reduce((sum, stage, itemIndex) =>
+        sum + stageFitCost(items[itemIndex].stat, items[itemIndex].actual, stage), 0);
+      combinations.push({ stages: [...stages], totalRolls, cost });
+      return;
+    }
+    items[index].possibilities.forEach(stage => {
+      stages.push(stage);
+      buildCombination(index + 1, stages);
+      stages.pop();
+    });
+  }
+  buildCombination(0, []);
+
+  const manualRollTotal = items.filter(item => !item.isAuto)
+    .reduce((sum, item) => sum + item.possibilities[0].rolls, 0);
+  // Three rolls always take priority over four whenever a valid combination exists.
+  let preferred = combinations.filter(combination => combination.totalRolls === 3);
+
+  if (preferred.length === 0) {
+    const lowestTotal = Math.min(...combinations.map(combination => combination.totalRolls));
+    preferred = combinations.filter(combination => combination.totalRolls === lowestTotal);
+  }
+
+  preferred.sort((a, b) => {
+    if (a.cost !== b.cost) return a.cost - b.cost;
+    for (let index = 0; index < a.stages.length; index += 1) {
+      if (a.stages[index].rolls !== b.stages[index].rolls) {
+        return a.stages[index].rolls - b.stages[index].rolls;
+      }
+    }
+    return 0;
+  });
+
+  const chosen = preferred[0];
+  items.forEach((item, index) => assignments.set(item.slot, chosen.stages[index]));
+  const reason = chosen.totalRolls === 4
+    ? (manualRollTotal === 4 ? "confirmed by manual stages" : "required by the entered values")
+    : (chosen.totalRolls === 3 ? "the standard total" : "the lowest valid total");
+  inferenceSummary.textContent = `Inferred ${chosen.totalRolls} total ${chosen.totalRolls === 1 ? "roll" : "rolls"}: ${reason}.`;
+  return assignments;
+}
+
+function updateAnalyzerSlot(slot, inferredStage) {
   const elements = analyzerElements(slot);
   const stat = elements.statSelect.value === "" ? null : loadedStats[Number(elements.statSelect.value)];
-  const multiplier = Number(elements.stageSelect.value);
-  const stage = ROLL_STAGES.find(item => item.multiplier === multiplier);
+  const autoOption = elements.stageSelect.querySelector('option[value="auto"]');
+  const isAuto = elements.stageSelect.value === "auto";
+  const stage = isAuto ? inferredStage
+    : ROLL_STAGES.find(item => item.multiplier === Number(elements.stageSelect.value));
+  const multiplier = stage?.multiplier;
+  autoOption.textContent = !stat ? "Auto · Base" : stage ? `Auto · ${stage.label}` : "Auto · No match";
   elements.error.hidden = true;
   delete slot.dataset.qualityScore;
 
-  if (!stat || !stage) {
+  if (!stat) {
     elements.empty.hidden = false;
     elements.result.hidden = true;
     elements.slider.disabled = true;
     elements.grade.textContent = "Not selected";
     elements.grade.dataset.rated = "false";
-    if (refreshOverall) updateOverallEvaluation();
+    return;
+  }
+
+  if (!stage) {
+    elements.empty.hidden = true;
+    elements.result.hidden = true;
+    elements.slider.disabled = true;
+    elements.grade.textContent = "No valid stage";
+    elements.grade.dataset.rated = "false";
+    elements.error.textContent = "This value does not fit any roll stage.";
+    elements.error.hidden = false;
     return;
   }
 
@@ -324,13 +464,11 @@ function updateAnalyzerSlot(slot, refreshOverall = true) {
   elements.slider.disabled = false;
 
   if (rawValue === "") {
-    if (refreshOverall) updateOverallEvaluation();
     return;
   }
   if (!/^\d+$/.test(rawValue)) {
     elements.error.textContent = "Enter a non-negative whole number.";
     elements.error.hidden = false;
-    if (refreshOverall) updateOverallEvaluation();
     return;
   }
 
@@ -338,7 +476,6 @@ function updateAnalyzerSlot(slot, refreshOverall = true) {
   if (!Number.isSafeInteger(actual) || actual < minimum || actual > maximum) {
     elements.error.textContent = `Enter ${minimum}${stat.unit} to ${maximum}${stat.unit}.`;
     elements.error.hidden = false;
-    if (refreshOverall) updateOverallEvaluation();
     return;
   }
 
@@ -352,7 +489,6 @@ function updateAnalyzerSlot(slot, refreshOverall = true) {
   elements.slider.value = String(actual);
   elements.actual.textContent = `Actual ${actual}${stat.unit}`;
   slot.dataset.qualityScore = String(score);
-  if (refreshOverall) updateOverallEvaluation();
 }
 
 function initializeAnalyzerSlots() {
@@ -367,15 +503,18 @@ function initializeAnalyzerSlots() {
 
     slot.querySelector("form").addEventListener("submit", event => event.preventDefault());
     elements.statSelect.addEventListener("change", () => {
-      elements.stageSelect.value = "1";
+      elements.stageSelect.value = "auto";
       refreshAnalyzerOptions();
       setAnalyzerSlotAverage(slot);
     });
-    elements.stageSelect.addEventListener("change", () => setAnalyzerSlotAverage(slot));
-    elements.valueInput.addEventListener("input", () => updateAnalyzerSlot(slot));
+    elements.stageSelect.addEventListener("change", () => {
+      if (elements.stageSelect.value === "auto") updateAllAnalyzerSlots();
+      else setAnalyzerSlotAverage(slot);
+    });
+    elements.valueInput.addEventListener("input", updateAllAnalyzerSlots);
     elements.slider.addEventListener("input", () => {
       elements.valueInput.value = elements.slider.value;
-      updateAnalyzerSlot(slot);
+      updateAllAnalyzerSlots();
     });
     analyzerSlotsContainer.appendChild(slot);
   }
@@ -383,7 +522,8 @@ function initializeAnalyzerSlots() {
 }
 
 function updateAllAnalyzerSlots() {
-  document.querySelectorAll(".analyzer-card").forEach(slot => updateAnalyzerSlot(slot, false));
+  const inferredStages = inferAnalyzerStages();
+  document.querySelectorAll(".analyzer-card").forEach(slot => updateAnalyzerSlot(slot, inferredStages.get(slot)));
   updateOverallEvaluation();
 }
 

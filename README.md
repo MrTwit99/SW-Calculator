@@ -4,7 +4,11 @@ A responsive, dependency-free webpage showing the minimum, midpoint average, and
 
 Average values use the lower whole-number midpoint: `floor((Min + Max) / 2)`. The floored midpoint is calculated before applying the roll multiplier.
 
-The Roll Quality analyzer provides four independent stat slots. Each selected stat must be unique and becomes unavailable in the other slots until it is deselected. A separate Normal/Ancient selector applies the appropriate maximums to all four analyzed stats without changing the reference tables. Selecting a stat defaults to the Base stage and its floored average value; changing stages selects that stage's average. Typing moves the marker, and moving the slider fills the value field immediately. Percentages are rounded down to whole numbers; decimal, negative, and out-of-range inputs are rejected.
+The Roll Quality analyzer provides four independent stat slots. Each selected stat must be unique and becomes unavailable in the other slots until it is deselected. A separate Normal/Ancient selector applies the appropriate maximums to all four analyzed stats without changing the reference tables. Selecting a stat defaults to automatic stage detection at Base and its floored average value. Typing moves the marker, and moving the slider fills the value field immediately. Percentages are rounded down to whole numbers; decimal, negative, and out-of-range inputs are rejected.
+
+Automatic stage detection evaluates every roll stage whose range contains the entered value. With four valid stats, it evaluates their combinations together. Any valid three-roll combination always takes priority over every four-roll combination. Four total rolls are selected only when manual stages make three impossible, or when the entered values cannot form a valid three-roll result. Otherwise it chooses the lowest valid total, and overlapping stage ranges are resolved toward the lower stage. Any stage can still be selected manually.
+
+If the minimum feasible stages require more than four total rolls, the analyzer displays an impossible-combination warning and blocks the Overall Rune Evaluation. Individual stat results remain visible so the conflicting values or manual stages can be corrected.
 
 The Overall Rune Evaluation is the equally weighted average of all valid selected stat quality scores, rounded down to a whole percentage. If a selected stat is invalid, the interface marks the result as partial and excludes that stat until corrected.
 
