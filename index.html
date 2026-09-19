@@ -35,16 +35,19 @@
     <section class="toolbar" aria-label="Calculator controls">
       <div>
         <p class="toolbar__label">Stats overview</p>
-        <p class="toolbar__count" id="visible-count">10 stats</p>
+        <p class="toolbar__count" id="visible-count">Loading stats…</p>
       </div>
       <div class="toolbar__controls">
-        <div class="category-picker" aria-label="Prioritize a stat category">
+        <div class="category-picker" aria-label="Filter by stat category">
           <button class="category-button is-active" type="button" data-category="all" aria-pressed="true">All</button>
           <button class="category-button" type="button" data-category="offensive" aria-pressed="false">
             <span class="category-button__dot category-button__dot--offensive" aria-hidden="true"></span>Offensive
           </button>
           <button class="category-button" type="button" data-category="defensive" aria-pressed="false">
             <span class="category-button__dot category-button__dot--defensive" aria-hidden="true"></span>Defensive
+          </button>
+          <button class="category-button" type="button" data-category="uncategorised" aria-pressed="false" hidden>
+            <span class="category-button__dot category-button__dot--uncategorised" aria-hidden="true"></span>Uncategorised
           </button>
         </div>
         <label class="search">
@@ -57,7 +60,7 @@
       </div>
     </section>
 
-    <p class="category-status" id="category-status">Showing all stats in their default order.</p>
+    <p class="category-status" id="category-status">Reading stat definitions from rune_info.js…</p>
 
     <section class="stat-grid" id="stat-grid" aria-live="polite"></section>
 
@@ -73,9 +76,10 @@
   </main>
 
   <footer>
-    <p>Rune Stat Calculator <span aria-hidden="true">·</span> Values from <code>rune_info.txt</code></p>
+    <p>Rune Stat Calculator <span aria-hidden="true">·</span> Values from <code>rune_info.js</code></p>
   </footer>
 
+  <script src="rune_info.js"></script>
   <script src="script.js"></script>
 </body>
 </html>
