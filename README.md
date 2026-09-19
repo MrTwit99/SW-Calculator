@@ -4,6 +4,10 @@ A responsive, dependency-free webpage showing the minimum, midpoint average, and
 
 Average values use the lower whole-number midpoint: `floor((Min + Max) / 2)`. The floored midpoint is calculated before applying the roll multiplier.
 
+The Roll Quality analyzer provides four independent stat slots. Each selected stat must be unique and becomes unavailable in the other slots until it is deselected. A separate Normal/Ancient selector applies the appropriate maximums to all four analyzed stats without changing the reference tables. Selecting a stat defaults to the Base stage and its floored average value; changing stages selects that stage's average. Typing moves the marker, and moving the slider fills the value field immediately. Percentages are rounded down to whole numbers; decimal, negative, and out-of-range inputs are rejected.
+
+The Overall Rune Evaluation is the equally weighted average of all valid selected stat quality scores, rounded down to a whole percentage. If a selected stat is invalid, the interface marks the result as partial and excludes that stat until corrected.
+
 ## Add or update stats
 
 `rune_info.js` is loaded and parsed whenever the page starts. Add stat blocks inside its `window.RUNE_INFO` template string and separate them with a blank line:
@@ -15,7 +19,7 @@ Max = 8%
 Category = Defensive
 ```
 
-Both `Min` and `Max` are required. They must be valid, non-negative numbers, and `Max` must be greater than or equal to `Min`. Blocks that fail validation are ignored. A `%` in the name or either value makes it a percentage stat.
+Both `Min` and `Max` are required. They must be valid, non-negative whole numbers, and `Max` must be greater than or equal to `Min`. Decimals and blocks that fail validation are ignored. A `%` in the name or either value makes it a percentage stat.
 
 `Category` accepts `Offensive`, `Defensive`, or both separated by a comma, such as `Category = Offensive, Defensive`. It is optional; a stat with no recognized category is displayed as `Uncategorised`. An optional `Short` field can set the abbreviation shown on its card.
 

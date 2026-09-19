@@ -4,14 +4,32 @@ const visibleCount = document.querySelector("#visible-count");
 const emptyState = document.querySelector("#empty-state");
 const categoryStatus = document.querySelector("#category-status");
 const categoryButtons = document.querySelectorAll(".category-button");
-const runeModeButtons = document.querySelectorAll(".rune-mode-button");
+const runeModeButtons = document.querySelectorAll("[data-rune-mode]");
+const analyzerModeButtons = document.querySelectorAll("[data-analyzer-mode]");
+const analyzerSlotsContainer = document.querySelector("#analyzer-slots");
+const overallScore = document.querySelector("#overall-score");
+const overallGrade = document.querySelector("#overall-grade");
+const overallBar = document.querySelector("#overall-bar");
+const overallBarFill = document.querySelector("#overall-bar-fill");
+const overallBarMarker = document.querySelector("#overall-bar-marker");
+const overallContext = document.querySelector("#overall-context");
+const overallCount = document.querySelector("#overall-count");
+const ANALYZER_SLOT_COUNT = 4;
+const ROLL_STAGES = [
+  { label: "Base", multiplier: 1 },
+  { label: "1 roll", multiplier: 2 },
+  { label: "2 rolls", multiplier: 3 },
+  { label: "3 rolls", multiplier: 4 },
+  { label: "4 rolls", multiplier: 5 }
+];
 let activeCategory = "all";
 let activeRuneMode = "normal";
+let activeAnalyzerRuneMode = "normal";
 let loadedStats = [];
 
 function parseNumber(value) {
   const normalized = value?.trim();
-  if (!normalized || !/^[+-]?(?:\d+(?:\.\d+)?|\.\d+)\s*%?$/.test(normalized)) return NaN;
+  if (!normalized || !/^\+?\d+\s*%?$/.test(normalized)) return NaN;
   return Number(normalized.replace("%", "").trim());
 }
 
@@ -51,7 +69,7 @@ function parseRuneInfo(text) {
     const min = parseNumber(fields.min);
     const max = parseNumber(fields.max);
     if (!Number.isFinite(min) || !Number.isFinite(max) || min < 0 || max < 0 || min > max) {
-      console.warn(`Ignored invalid stat \"${name}\". Min and Max must be non-negative numbers, and Max must be greater than or equal to Min.`);
+      console.warn(`Ignored invalid stat \"${name}\". Min and Max must be non-negative whole numbers, and Max must be greater than or equal to Min.`);
       return null;
     }
 
@@ -61,7 +79,7 @@ function parseRuneInfo(text) {
       if (Number.isFinite(parsedAncientMax) && parsedAncientMax >= min) {
         ancientMax = parsedAncientMax;
       } else {
-        console.warn(`Ignored invalid AncientMax for \"${name}\". It must be a non-negative number greater than or equal to Min.`);
+        console.warn(`Ignored invalid AncientMax for \"${name}\". It must be a non-negative whole number greater than or equal to Min.`);
       }
     }
 
@@ -92,32 +110,24 @@ function escapeHtml(value) {
 }
 
 function formatValue(value, unit) {
-  return `${Number.isInteger(value) ? value : value.toFixed(1)}${unit}`;
+  return `${value}${unit}`;
 }
 
 function resultCell(kind, base, multiplier, unit) {
   const result = base * multiplier;
-  const shownBase = Number.isInteger(base) ? base : base.toFixed(1);
+  const shownBase = base;
   return `<td><span class="value value--${kind}">${formatValue(result, unit)}</span>
     <span class="formula">${shownBase}${unit} &times; ${multiplier}</span></td>`;
 }
 
 function createCard(stat) {
-  const effectiveMax = activeRuneMode === "ancient" && stat.ancientMax !== null
-    ? stat.ancientMax : stat.max;
+  const effectiveMax = getEffectiveMax(stat);
   const average = Math.floor((stat.min + effectiveMax) / 2);
   const categoryTags = stat.categories.map(category => {
     const label = category[0].toUpperCase() + category.slice(1);
     return `<span class="stat-card__category stat-card__category--${category}">${label}</span>`;
   }).join("");
-  const rollStages = [
-    { label: "Base", multiplier: 1 },
-    { label: "1 roll", multiplier: 2 },
-    { label: "2 rolls", multiplier: 3 },
-    { label: "3 rolls", multiplier: 4 },
-    { label: "4 rolls", multiplier: 5 }
-  ];
-  const rows = rollStages.map(stage => `<tr>
+  const rows = ROLL_STAGES.map(stage => `<tr>
     <td class="multiplier">${stage.label}</td>
     ${resultCell("min", stat.min, stage.multiplier, stat.unit)}
     ${resultCell("avg", average, stage.multiplier, stat.unit)}
@@ -139,6 +149,244 @@ function createCard(stat) {
   return article;
 }
 
+function getEffectiveMax(stat, runeMode = activeRuneMode) {
+  return runeMode === "ancient" && stat.ancientMax !== null
+    ? stat.ancientMax : stat.max;
+}
+
+function qualityLabel(score) {
+  if (score === 100) return "Perfect";
+  if (score >= 90) return "Near perfect";
+  if (score >= 75) return "Excellent";
+  if (score >= 50) return "Good";
+  if (score >= 25) return "Below average";
+  return "Low";
+}
+
+function updateOverallEvaluation() {
+  const slots = [...document.querySelectorAll(".analyzer-card")];
+  const selectedCount = slots.filter(slot => analyzerElements(slot).statSelect.value !== "").length;
+  const validScores = slots
+    .map(slot => Number(slot.dataset.qualityScore))
+    .filter(score => Number.isFinite(score));
+
+  overallCount.textContent = `${validScores.length} of ${ANALYZER_SLOT_COUNT} stats`;
+
+  if (validScores.length === 0) {
+    overallScore.textContent = "—";
+    overallGrade.textContent = "Not rated";
+    overallGrade.dataset.rated = "false";
+    overallBarFill.style.width = "0%";
+    overallBarMarker.style.left = "0%";
+    overallBar.setAttribute("aria-valuenow", "0");
+    overallContext.textContent = selectedCount === 0
+      ? "Select at least one stat to evaluate the rune."
+      : "Enter a valid value for the selected stat to calculate the result.";
+    return;
+  }
+
+  const score = Math.floor(validScores.reduce((sum, value) => sum + value, 0) / validScores.length);
+  overallScore.textContent = `${score}%`;
+  overallGrade.textContent = qualityLabel(score);
+  overallGrade.dataset.rated = "true";
+  overallBarFill.style.width = `${score}%`;
+  overallBarMarker.style.left = `${score}%`;
+  overallBar.setAttribute("aria-valuenow", String(score));
+
+  const invalidSelectedCount = selectedCount - validScores.length;
+  overallContext.textContent = invalidSelectedCount > 0
+    ? `Partial evaluation: ${invalidSelectedCount} selected ${invalidSelectedCount === 1 ? "stat needs" : "stats need"} a valid value.`
+    : `Equal-weight average of ${validScores.length} valid ${validScores.length === 1 ? "stat" : "stats"}, rounded down.`;
+}
+
+function createAnalyzerSlot(slotIndex) {
+  const article = document.createElement("article");
+  article.className = "analyzer-card";
+  article.dataset.analyzerSlot = String(slotIndex);
+  const stageOptions = ROLL_STAGES.map(stage =>
+    `<option value="${stage.multiplier}">${stage.label}</option>`).join("");
+  article.innerHTML = `
+    <div class="analyzer-card__heading">
+      <span class="analyzer-card__number">Stat ${slotIndex + 1}</span>
+      <span class="quality-grade" data-quality-grade>Not selected</span>
+    </div>
+    <form class="analyzer-form" novalidate>
+      <label class="field"><span>Stat</span><select data-analyzer-stat required></select></label>
+      <label class="field"><span>Stage</span><select data-analyzer-stage>${stageOptions}</select></label>
+      <label class="field"><span>Actual value</span>
+        <input data-analyzer-value type="number" min="0" step="1" inputmode="numeric" placeholder="Value">
+      </label>
+    </form>
+    <div class="quality-output">
+      <p class="quality-output__empty" data-quality-empty>Choose a stat to begin.</p>
+      <p class="quality-output__error" data-quality-error hidden></p>
+      <div class="quality-result" data-quality-result hidden>
+        <div class="quality-result__summary">
+          <div><span class="quality-result__label">Roll quality</span><strong data-quality-score>0%</strong></div>
+        </div>
+        <div class="quality-bar">
+          <span class="quality-bar__fill" data-quality-fill></span>
+          <span class="quality-bar__marker" data-quality-marker></span>
+          <input class="quality-slider" data-quality-slider type="range" min="0" max="100" step="1" value="0" aria-label="Select actual stat value by sliding" disabled>
+        </div>
+        <div class="quality-scale">
+          <span data-quality-min>Min 0</span><span data-quality-actual>Actual 0</span><span data-quality-max>Max 0</span>
+        </div>
+        <p class="quality-result__context" data-quality-context></p>
+      </div>
+    </div>`;
+  return article;
+}
+
+function analyzerElements(slot) {
+  return {
+    statSelect: slot.querySelector("[data-analyzer-stat]"),
+    stageSelect: slot.querySelector("[data-analyzer-stage]"),
+    valueInput: slot.querySelector("[data-analyzer-value]"),
+    empty: slot.querySelector("[data-quality-empty]"),
+    error: slot.querySelector("[data-quality-error]"),
+    result: slot.querySelector("[data-quality-result]"),
+    score: slot.querySelector("[data-quality-score]"),
+    grade: slot.querySelector("[data-quality-grade]"),
+    fill: slot.querySelector("[data-quality-fill]"),
+    marker: slot.querySelector("[data-quality-marker]"),
+    slider: slot.querySelector("[data-quality-slider]"),
+    min: slot.querySelector("[data-quality-min]"),
+    actual: slot.querySelector("[data-quality-actual]"),
+    max: slot.querySelector("[data-quality-max]"),
+    context: slot.querySelector("[data-quality-context]")
+  };
+}
+
+function refreshAnalyzerOptions() {
+  const slots = [...document.querySelectorAll(".analyzer-card")];
+  const selectedValues = slots.map(slot => analyzerElements(slot).statSelect.value).filter(Boolean);
+
+  slots.forEach(slot => {
+    const { statSelect } = analyzerElements(slot);
+    [...statSelect.options].forEach(option => {
+      option.disabled = option.value !== "" && option.value !== statSelect.value && selectedValues.includes(option.value);
+    });
+  });
+}
+
+function setAnalyzerSlotAverage(slot) {
+  const { statSelect, stageSelect, valueInput } = analyzerElements(slot);
+  const stat = statSelect.value === "" ? null : loadedStats[Number(statSelect.value)];
+  const multiplier = Number(stageSelect.value);
+  if (!stat || !ROLL_STAGES.some(stage => stage.multiplier === multiplier)) {
+    valueInput.value = "";
+    updateAnalyzerSlot(slot);
+    return;
+  }
+  const singleRollAverage = Math.floor((stat.min + getEffectiveMax(stat, activeAnalyzerRuneMode)) / 2);
+  valueInput.value = String(singleRollAverage * multiplier);
+  updateAnalyzerSlot(slot);
+}
+
+function updateAnalyzerSlot(slot, refreshOverall = true) {
+  const elements = analyzerElements(slot);
+  const stat = elements.statSelect.value === "" ? null : loadedStats[Number(elements.statSelect.value)];
+  const multiplier = Number(elements.stageSelect.value);
+  const stage = ROLL_STAGES.find(item => item.multiplier === multiplier);
+  elements.error.hidden = true;
+  delete slot.dataset.qualityScore;
+
+  if (!stat || !stage) {
+    elements.empty.hidden = false;
+    elements.result.hidden = true;
+    elements.slider.disabled = true;
+    elements.grade.textContent = "Not selected";
+    elements.grade.dataset.rated = "false";
+    if (refreshOverall) updateOverallEvaluation();
+    return;
+  }
+
+  const minimum = stat.min * multiplier;
+  const maximum = getEffectiveMax(stat, activeAnalyzerRuneMode) * multiplier;
+  const rawValue = elements.valueInput.value.trim();
+  const modeLabel = activeAnalyzerRuneMode === "ancient" ? "Ancient" : "Normal";
+
+  elements.empty.hidden = true;
+  elements.result.hidden = false;
+  elements.score.textContent = "—";
+  elements.grade.textContent = "Select value";
+  elements.grade.dataset.rated = "false";
+  elements.fill.style.width = "0%";
+  elements.marker.style.left = "0%";
+  elements.min.textContent = `Min ${minimum}${stat.unit}`;
+  elements.actual.textContent = "Actual —";
+  elements.max.textContent = `Max ${maximum}${stat.unit}`;
+  elements.context.textContent = `${modeLabel} ${stat.name} · ${stage.label}`;
+  elements.slider.min = String(minimum);
+  elements.slider.max = String(maximum);
+  elements.slider.value = String(minimum);
+  elements.slider.disabled = false;
+
+  if (rawValue === "") {
+    if (refreshOverall) updateOverallEvaluation();
+    return;
+  }
+  if (!/^\d+$/.test(rawValue)) {
+    elements.error.textContent = "Enter a non-negative whole number.";
+    elements.error.hidden = false;
+    if (refreshOverall) updateOverallEvaluation();
+    return;
+  }
+
+  const actual = Number(rawValue);
+  if (!Number.isSafeInteger(actual) || actual < minimum || actual > maximum) {
+    elements.error.textContent = `Enter ${minimum}${stat.unit} to ${maximum}${stat.unit}.`;
+    elements.error.hidden = false;
+    if (refreshOverall) updateOverallEvaluation();
+    return;
+  }
+
+  const score = maximum === minimum ? 100
+    : Math.floor(((actual - minimum) / (maximum - minimum)) * 100);
+  elements.score.textContent = `${score}%`;
+  elements.grade.textContent = qualityLabel(score);
+  elements.grade.dataset.rated = "true";
+  elements.fill.style.width = `${score}%`;
+  elements.marker.style.left = `${score}%`;
+  elements.slider.value = String(actual);
+  elements.actual.textContent = `Actual ${actual}${stat.unit}`;
+  slot.dataset.qualityScore = String(score);
+  if (refreshOverall) updateOverallEvaluation();
+}
+
+function initializeAnalyzerSlots() {
+  analyzerSlotsContainer.replaceChildren();
+  for (let index = 0; index < ANALYZER_SLOT_COUNT; index += 1) {
+    const slot = createAnalyzerSlot(index);
+    const elements = analyzerElements(slot);
+    elements.statSelect.add(new Option("Choose a stat", ""));
+    loadedStats.map((stat, statIndex) => ({ stat, statIndex }))
+      .sort((a, b) => a.stat.name.localeCompare(b.stat.name))
+      .forEach(({ stat, statIndex }) => elements.statSelect.add(new Option(stat.name, String(statIndex))));
+
+    slot.querySelector("form").addEventListener("submit", event => event.preventDefault());
+    elements.statSelect.addEventListener("change", () => {
+      elements.stageSelect.value = "1";
+      refreshAnalyzerOptions();
+      setAnalyzerSlotAverage(slot);
+    });
+    elements.stageSelect.addEventListener("change", () => setAnalyzerSlotAverage(slot));
+    elements.valueInput.addEventListener("input", () => updateAnalyzerSlot(slot));
+    elements.slider.addEventListener("input", () => {
+      elements.valueInput.value = elements.slider.value;
+      updateAnalyzerSlot(slot);
+    });
+    analyzerSlotsContainer.appendChild(slot);
+  }
+  refreshAnalyzerOptions();
+}
+
+function updateAllAnalyzerSlots() {
+  document.querySelectorAll(".analyzer-card").forEach(slot => updateAnalyzerSlot(slot, false));
+  updateOverallEvaluation();
+}
+
 function renderStats() {
   grid.replaceChildren();
   loadedStats.forEach(stat => grid.appendChild(createCard(stat)));
@@ -146,6 +394,7 @@ function renderStats() {
     card.dataset.originalIndex = index;
   });
   selectCategory(activeCategory);
+  updateAllAnalyzerSlots();
 }
 
 function selectCategory(category) {
@@ -221,6 +470,18 @@ runeModeButtons.forEach(button => {
   });
 });
 
+analyzerModeButtons.forEach(button => {
+  button.addEventListener("click", () => {
+    activeAnalyzerRuneMode = button.dataset.analyzerMode;
+    analyzerModeButtons.forEach(modeButton => {
+      const isActive = modeButton === button;
+      modeButton.classList.toggle("is-active", isActive);
+      modeButton.setAttribute("aria-pressed", String(isActive));
+    });
+    updateAllAnalyzerSlots();
+  });
+});
+
 filter.addEventListener("input", applyFilters);
 
 function loadStats() {
@@ -230,6 +491,7 @@ function loadStats() {
     loadedStats = parseRuneInfo(window.RUNE_INFO);
     if (loadedStats.length === 0) throw new Error("No valid stats were found in rune_info.js");
 
+    initializeAnalyzerSlots();
     renderStats();
     categoryButtons.forEach(button => {
       const category = button.dataset.category;

@@ -69,6 +69,44 @@
 
     <p class="category-status" id="category-status">Reading stat definitions from rune_info.js&hellip;</p>
 
+    <section class="roll-analyzer" aria-labelledby="roll-analyzer-title">
+      <div class="roll-analyzer__header">
+        <div class="roll-analyzer__intro">
+          <p class="eyebrow eyebrow--dark">Rune evaluation</p>
+          <h2 id="roll-analyzer-title">Roll quality</h2>
+          <p>Compare up to four unique stats with their possible ranges at selected roll stages.</p>
+        </div>
+        <div class="analyzer-mode-picker" role="group" aria-label="Select analyzed rune type">
+          <span class="rune-mode-picker__label">Analyzed rune</span>
+          <div class="rune-mode-picker__buttons">
+            <button class="rune-mode-button is-active" type="button" data-analyzer-mode="normal" aria-pressed="true">Normal</button>
+            <button class="rune-mode-button" type="button" data-analyzer-mode="ancient" aria-pressed="false">Ancient</button>
+          </div>
+        </div>
+      </div>
+      <div class="analyzer-slots" id="analyzer-slots" aria-live="polite"></div>
+      <aside class="overall-evaluation" aria-labelledby="overall-evaluation-title">
+        <div class="overall-evaluation__summary">
+          <div>
+            <span class="overall-evaluation__eyebrow">Combined result</span>
+            <h3 id="overall-evaluation-title">Overall rune evaluation</h3>
+          </div>
+          <div class="overall-evaluation__score">
+            <strong id="overall-score">&mdash;</strong>
+            <span class="quality-grade" id="overall-grade">Not rated</span>
+          </div>
+        </div>
+        <div class="quality-bar overall-evaluation__bar" id="overall-bar" role="progressbar" aria-label="Overall rune quality" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <span class="quality-bar__fill" id="overall-bar-fill"></span>
+          <span class="quality-bar__marker" id="overall-bar-marker"></span>
+        </div>
+        <div class="overall-evaluation__footer">
+          <p id="overall-context">Select at least one stat to evaluate the rune.</p>
+          <span id="overall-count">0 of 4 stats</span>
+        </div>
+      </aside>
+    </section>
+
     <section class="stat-grid" id="stat-grid" aria-live="polite"></section>
 
     <p class="empty-state" id="empty-state" hidden>No stats match your search.</p>
