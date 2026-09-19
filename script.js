@@ -4,7 +4,10 @@ const visibleCount = document.querySelector("#visible-count");
 const emptyState = document.querySelector("#empty-state");
 const categoryStatus = document.querySelector("#category-status");
 const categoryButtons = document.querySelectorAll(".category-button");
+const runeModeButtons = document.querySelectorAll(".rune-mode-button");
 let activeCategory = "all";
+let activeRuneMode = "normal";
+let loadedStats = [];
 
 function parseNumber(value) {
   const normalized = value?.trim();
@@ -52,6 +55,16 @@ function parseRuneInfo(text) {
       return null;
     }
 
+    let ancientMax = null;
+    if (fields.ancientmax !== undefined) {
+      const parsedAncientMax = parseNumber(fields.ancientmax);
+      if (Number.isFinite(parsedAncientMax) && parsedAncientMax >= min) {
+        ancientMax = parsedAncientMax;
+      } else {
+        console.warn(`Ignored invalid AncientMax for \"${name}\". It must be a non-negative number greater than or equal to Min.`);
+      }
+    }
+
     const unit = fields.min.includes("%") || fields.max.includes("%") || name.includes("%") ? "%" : "";
     const requestedCategories = (fields.category || "")
       .split(/[,|/]+/)
@@ -65,6 +78,7 @@ function parseRuneInfo(text) {
       short: fields.short || makeShortName(name),
       min,
       max,
+      ancientMax,
       unit,
       type: unit ? "Percent" : "Flat",
       categories
@@ -89,16 +103,25 @@ function resultCell(kind, base, multiplier, unit) {
 }
 
 function createCard(stat) {
-  const average = (stat.min + stat.max) / 2;
+  const effectiveMax = activeRuneMode === "ancient" && stat.ancientMax !== null
+    ? stat.ancientMax : stat.max;
+  const average = Math.floor((stat.min + effectiveMax) / 2);
   const categoryTags = stat.categories.map(category => {
     const label = category[0].toUpperCase() + category.slice(1);
     return `<span class="stat-card__category stat-card__category--${category}">${label}</span>`;
   }).join("");
-  const rows = [1, 2, 3, 4].map(multiplier => `<tr>
-    <td class="multiplier">${multiplier}&times;</td>
-    ${resultCell("min", stat.min, multiplier, stat.unit)}
-    ${resultCell("avg", average, multiplier, stat.unit)}
-    ${resultCell("max", stat.max, multiplier, stat.unit)}</tr>`).join("");
+  const rollStages = [
+    { label: "Base", multiplier: 1 },
+    { label: "1 roll", multiplier: 2 },
+    { label: "2 rolls", multiplier: 3 },
+    { label: "3 rolls", multiplier: 4 },
+    { label: "4 rolls", multiplier: 5 }
+  ];
+  const rows = rollStages.map(stage => `<tr>
+    <td class="multiplier">${stage.label}</td>
+    ${resultCell("min", stat.min, stage.multiplier, stat.unit)}
+    ${resultCell("avg", average, stage.multiplier, stat.unit)}
+    ${resultCell("max", effectiveMax, stage.multiplier, stat.unit)}</tr>`).join("");
 
   const article = document.createElement("article");
   article.className = "stat-card";
@@ -107,22 +130,39 @@ function createCard(stat) {
   article.innerHTML = `<div class="stat-card__header"><div class="stat-card__title">
     <span class="stat-card__icon" aria-hidden="true">${escapeHtml(stat.short)}</span><div>
     <h2>${escapeHtml(stat.name)}</h2>
-    <p class="stat-card__range">Base range ${formatValue(stat.min, stat.unit)}&ndash;${formatValue(stat.max, stat.unit)}</p>
+    <p class="stat-card__range">${activeRuneMode === "ancient" && stat.ancientMax !== null ? "Ancient" : "Base"} range ${formatValue(stat.min, stat.unit)}&ndash;${formatValue(effectiveMax, stat.unit)}</p>
     <span class="stat-card__categories">${categoryTags}</span>
     </div></div><span class="stat-card__type">${stat.type}</span></div>
-    <div class="table-wrap"><table><thead><tr><th scope="col">Rolls</th>
+    <div class="table-wrap"><table><thead><tr><th scope="col">Stage</th>
     <th scope="col">Min</th><th scope="col">Average</th><th scope="col">Max</th>
     </tr></thead><tbody>${rows}</tbody></table></div>`;
   return article;
+}
+
+function renderStats() {
+  grid.replaceChildren();
+  loadedStats.forEach(stat => grid.appendChild(createCard(stat)));
+  document.querySelectorAll(".stat-card").forEach((card, index) => {
+    card.dataset.originalIndex = index;
+  });
+  selectCategory(activeCategory);
 }
 
 function selectCategory(category) {
   activeCategory = category;
   const cards = [...document.querySelectorAll(".stat-card")];
   cards.sort((a, b) => {
+    if (category === "all") return a.dataset.name.localeCompare(b.dataset.name);
+
+    const aCategories = a.dataset.categories.split(" ");
+    const bCategories = b.dataset.categories.split(" ");
+    const aHasBoth = aCategories.includes("offensive") && aCategories.includes("defensive");
+    const bHasBoth = bCategories.includes("offensive") && bCategories.includes("defensive");
+    if (aHasBoth !== bHasBoth) return aHasBoth ? -1 : 1;
+
     if (["offensive", "defensive"].includes(category)) {
-      const aPriority = a.dataset.categories.split(" ").includes(category) ? 0 : 1;
-      const bPriority = b.dataset.categories.split(" ").includes(category) ? 0 : 1;
+      const aPriority = aCategories.includes(category) ? 0 : 1;
+      const bPriority = bCategories.includes(category) ? 0 : 1;
       if (aPriority !== bPriority) return aPriority - bPriority;
     }
     return Number(a.dataset.originalIndex) - Number(b.dataset.originalIndex);
@@ -135,12 +175,12 @@ function selectCategory(category) {
     button.setAttribute("aria-pressed", String(isActive));
   });
   if (category === "all") {
-    categoryStatus.textContent = "Showing all stats in their file order.";
+    categoryStatus.textContent = "Showing all stats in alphabetical order.";
   } else if (category === "uncategorised") {
     categoryStatus.textContent = "Showing uncategorised stats only.";
   } else {
     const remainingCategory = category === "offensive" ? "defensive" : "offensive";
-    categoryStatus.textContent = `${category[0].toUpperCase() + category.slice(1)} stats are shown first; ${remainingCategory} stats follow below.`;
+    categoryStatus.textContent = `Shared stats are shown first, followed by ${category} stats; ${remainingCategory} stats follow below.`;
   }
   applyFilters();
 }
@@ -169,25 +209,34 @@ categoryButtons.forEach(button => {
   button.addEventListener("click", () => selectCategory(button.dataset.category));
 });
 
+runeModeButtons.forEach(button => {
+  button.addEventListener("click", () => {
+    activeRuneMode = button.dataset.runeMode;
+    runeModeButtons.forEach(modeButton => {
+      const isActive = modeButton === button;
+      modeButton.classList.toggle("is-active", isActive);
+      modeButton.setAttribute("aria-pressed", String(isActive));
+    });
+    renderStats();
+  });
+});
+
 filter.addEventListener("input", applyFilters);
 
 function loadStats() {
   grid.setAttribute("aria-busy", "true");
   try {
     if (typeof window.RUNE_INFO !== "string") throw new Error("rune_info.js did not provide stat data");
-    const stats = parseRuneInfo(window.RUNE_INFO);
-    if (stats.length === 0) throw new Error("No valid stats were found in rune_info.js");
+    loadedStats = parseRuneInfo(window.RUNE_INFO);
+    if (loadedStats.length === 0) throw new Error("No valid stats were found in rune_info.js");
 
-    stats.forEach(stat => grid.appendChild(createCard(stat)));
-    document.querySelectorAll(".stat-card").forEach((card, index) => {
-      card.dataset.originalIndex = index;
-    });
+    renderStats();
     categoryButtons.forEach(button => {
       const category = button.dataset.category;
-      button.hidden = category !== "all" && !stats.some(stat => stat.categories.includes(category));
+      button.hidden = category !== "all" && !loadedStats.some(stat => stat.categories.includes(category));
     });
-    visibleCount.textContent = `${stats.length} ${stats.length === 1 ? "stat" : "stats"}`;
-    categoryStatus.textContent = "Showing all stats in their file order.";
+    visibleCount.textContent = `${loadedStats.length} ${loadedStats.length === 1 ? "stat" : "stats"}`;
+    categoryStatus.textContent = "Showing all stats in alphabetical order.";
     applyFilters();
   } catch (error) {
     visibleCount.textContent = "Stats unavailable";

@@ -156,6 +156,57 @@ main { padding: var(--section-space) 0 clamp(3rem, 7vw, 5rem); }
   gap: 12px;
 }
 
+.rune-mode-picker {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+}
+
+.rune-mode-picker__label {
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.rune-mode-picker__buttons {
+  display: flex;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid #e7dec8;
+  border-radius: 12px;
+  background: #f1ede4;
+}
+
+.rune-mode-button {
+  min-height: 36px;
+  padding: 7px 12px;
+  color: #756b58;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  font-size: .78rem;
+  font-weight: 750;
+  transition: color .18s ease, background-color .18s ease, box-shadow .18s ease, transform .18s ease;
+}
+
+.rune-mode-button:hover { color: #493d28; transform: translateY(-1px); }
+
+.rune-mode-button:focus-visible {
+  outline: 3px solid rgba(187, 134, 48, .22);
+  outline-offset: 1px;
+}
+
+.rune-mode-button.is-active {
+  color: #755013;
+  background: #fffaf0;
+  box-shadow: 0 2px 7px rgba(83, 61, 23, .13);
+}
+
 .category-picker {
   display: flex;
   max-width: 100%;
@@ -365,7 +416,7 @@ th {
 
 th:first-child,
 td:first-child { padding-left: 22px; text-align: left; }
-th:first-child { width: 17%; }
+th:first-child { width: 23%; }
 th:last-child,
 td:last-child { padding-right: 22px; }
 
@@ -384,6 +435,8 @@ tbody tr:hover { background: #fafcff; }
   color: #44516a;
   font-weight: 800;
 }
+
+.multiplier { white-space: nowrap; }
 
 .value { display: block; font-size: .92rem; }
 .value--min { color: var(--blue); }
@@ -478,6 +531,9 @@ footer code { color: #62708a; }
 
 @media (max-width: 700px) {
   .toolbar__controls { flex-direction: column; }
+  .rune-mode-picker { width: 100%; justify-content: space-between; }
+  .rune-mode-picker__buttons { flex: 1; }
+  .rune-mode-button { flex: 1; }
   .category-picker { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .category-button { justify-content: center; }
   .search { width: 100%; }

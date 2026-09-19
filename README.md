@@ -1,6 +1,8 @@
 # Rune Stat Calculator
 
-A responsive, dependency-free webpage showing the minimum, midpoint average, and maximum values for every rune stat across 1–4 rolls. Offensive and Defensive controls move the chosen category to the top while keeping the remaining stats visible below it.
+A responsive, dependency-free webpage showing the minimum, midpoint average, and maximum values for every rune stat from its 1× base value through four rolls at 5×. Offensive and Defensive controls move the chosen category to the top while keeping the remaining stats visible below it.
+
+Average values use the lower whole-number midpoint: `floor((Min + Max) / 2)`. The floored midpoint is calculated before applying the roll multiplier.
 
 ## Add or update stats
 
@@ -16,6 +18,16 @@ Category = Defensive
 Both `Min` and `Max` are required. They must be valid, non-negative numbers, and `Max` must be greater than or equal to `Min`. Blocks that fail validation are ignored. A `%` in the name or either value makes it a percentage stat.
 
 `Category` accepts `Offensive`, `Defensive`, or both separated by a comma, such as `Category = Offensive, Defensive`. It is optional; a stat with no recognized category is displayed as `Uncategorised`. An optional `Short` field can set the abbreviation shown on its card.
+
+An optional `AncientMax` field supplies the maximum used when Ancient rune mode is selected. Stats without it retain their normal maximum:
+
+```text
+Speed
+Min = 4
+Max = 6
+AncientMax = 7
+Category = Offensive, Defensive
+```
 
 ## Run locally
 

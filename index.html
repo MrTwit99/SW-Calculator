@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="description" content="Calculate minimum, average, and maximum rune stat rolls from 1x to 4x.">
+  <meta name="description" content="Calculate minimum, average, and maximum rune stats from the 1x base value through four rolls at 5x.">
   <title>Rune Stat Calculator</title>
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -19,7 +19,7 @@
         <p class="eyebrow">Roll value reference</p>
         <h1>Every rune roll,<br><span>at a glance.</span></h1>
         <p class="intro">
-          Compare the minimum, midpoint average, and maximum possible value for every stat across one to four rolls.
+          Compare the minimum, midpoint average, and maximum possible value from its base value through four additional rolls.
         </p>
       </div>
 
@@ -38,6 +38,13 @@
         <p class="toolbar__count" id="visible-count">Loading stats&hellip;</p>
       </div>
       <div class="toolbar__controls">
+        <div class="rune-mode-picker" role="group" aria-label="Select rune type">
+          <span class="rune-mode-picker__label">Rune type</span>
+          <div class="rune-mode-picker__buttons">
+            <button class="rune-mode-button is-active" type="button" data-rune-mode="normal" aria-pressed="true">Normal</button>
+            <button class="rune-mode-button" type="button" data-rune-mode="ancient" aria-pressed="false">Ancient</button>
+          </div>
+        </div>
         <div class="category-picker" aria-label="Filter by stat category">
           <button class="category-button is-active" type="button" data-category="all" aria-pressed="true">All</button>
           <button class="category-button" type="button" data-category="offensive" aria-pressed="false">
@@ -70,7 +77,7 @@
       <div class="calculation-note__icon" aria-hidden="true">i</div>
       <div>
         <h2>How the average is calculated</h2>
-        <p>The single-roll midpoint is calculated first: <strong>(minimum + maximum) &divide; 2</strong>. That result is then multiplied by the number of rolls.</p>
+        <p>The single-roll midpoint is calculated first and rounded down: <strong>floor((minimum + maximum) &divide; 2)</strong>. That whole number is then multiplied by the number of rolls.</p>
       </div>
     </aside>
   </main>
