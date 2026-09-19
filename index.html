@@ -35,7 +35,7 @@
     <section class="toolbar" aria-label="Calculator controls">
       <div>
         <p class="toolbar__label">Stats overview</p>
-        <p class="toolbar__count" id="visible-count">Loading stats…</p>
+        <p class="toolbar__count" id="visible-count">Loading stats&hellip;</p>
       </div>
       <div class="toolbar__controls">
         <div class="category-picker" aria-label="Filter by stat category">
@@ -55,12 +55,12 @@
           <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">
             <path d="m21 21-4.35-4.35m2.35-5.15a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
-          <input id="stat-filter" type="search" placeholder="Find a stat…" autocomplete="off">
+          <input id="stat-filter" type="search" placeholder="Find a stat&hellip;" autocomplete="off">
         </label>
       </div>
     </section>
 
-    <p class="category-status" id="category-status">Reading stat definitions from rune_info.js…</p>
+    <p class="category-status" id="category-status">Reading stat definitions from rune_info.js&hellip;</p>
 
     <section class="stat-grid" id="stat-grid" aria-live="polite"></section>
 
@@ -70,13 +70,13 @@
       <div class="calculation-note__icon" aria-hidden="true">i</div>
       <div>
         <h2>How the average is calculated</h2>
-        <p>The single-roll midpoint is calculated first: <strong>(minimum + maximum) ÷ 2</strong>. That result is then multiplied by the number of rolls.</p>
+        <p>The single-roll midpoint is calculated first: <strong>(minimum + maximum) &divide; 2</strong>. That result is then multiplied by the number of rolls.</p>
       </div>
     </aside>
   </main>
 
   <footer>
-    <p>Rune Stat Calculator <span aria-hidden="true">·</span> Values from <code>rune_info.js</code></p>
+    <p>Rune Stat Calculator <span aria-hidden="true">&middot;</span> Values from <code>rune_info.js</code></p>
   </footer>
 
   <script src="rune_info.js"></script>
