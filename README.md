@@ -2,6 +2,8 @@
 
 A responsive, dependency-free webpage showing the minimum, midpoint average, and maximum values for every rune stat from its 1× base value through four rolls at 5×. Offensive and Defensive controls move the chosen category to the top while keeping the remaining stats visible below it.
 
+The interface separates the focused Rune Evaluation workspace from the searchable Stat Reference tables. Evaluation is the default view.
+
 Average values use the lower whole-number midpoint: `floor((Min + Max) / 2)`. The floored midpoint is calculated before applying the roll multiplier.
 
 The Roll Quality analyzer provides four independent stat slots. Each selected stat must be unique and becomes unavailable in the other slots until it is deselected. A separate Normal/Ancient selector applies the appropriate maximums to all four analyzed stats without changing the reference tables. Selecting a stat defaults to automatic stage detection at Base and its floored average value. Typing moves the marker, and moving the slider fills the value field immediately. Percentages are rounded down to whole numbers; decimal, negative, and out-of-range inputs are rejected.
@@ -11,6 +13,8 @@ Automatic stage detection evaluates every roll stage whose range contains the en
 If the minimum feasible stages require more than four total rolls, the analyzer displays an impossible-combination warning and blocks the Overall Rune Evaluation. Individual stat results remain visible so the conflicting values or manual stages can be corrected.
 
 The Overall Rune Evaluation is the equally weighted average of all valid selected stat quality scores, rounded down to a whole percentage. If a selected stat is invalid, the interface marks the result as partial and excludes that stat until corrected.
+
+The inference dashboard shows the selected combination's total rolls, confidence, and up to three alternative valid combinations. Alternatives are selectable: loading one applies its stages to all four cards as manual choices, preserves the other available alternatives, and places the previously active combination back into the list. Each stat explains whether its stage was inferred automatically or selected manually and why that stage was used. Per-stat reset, Return all to Auto, and Reset all controls are provided.
 
 ## Add or update stats
 

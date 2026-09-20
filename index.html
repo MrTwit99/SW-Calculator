@@ -16,7 +16,7 @@
       </div>
 
       <div class="hero__copy">
-        <p class="eyebrow">Roll value reference</p>
+        <p class="eyebrow">Rune roll analysis</p>
         <h1>Every rune roll,<br><span>at a glance.</span></h1>
         <p class="intro">
           Compare the minimum, midpoint average, and maximum possible value from its base value through four additional rolls.
@@ -32,44 +32,13 @@
   </header>
 
   <main>
-    <section class="toolbar" aria-label="Calculator controls">
-      <div>
-        <p class="toolbar__label">Stats overview</p>
-        <p class="toolbar__count" id="visible-count">Loading stats&hellip;</p>
-      </div>
-      <div class="toolbar__controls">
-        <div class="rune-mode-picker" role="group" aria-label="Select rune type">
-          <span class="rune-mode-picker__label">Rune type</span>
-          <div class="rune-mode-picker__buttons">
-            <button class="rune-mode-button is-active" type="button" data-rune-mode="normal" aria-pressed="true">Normal</button>
-            <button class="rune-mode-button" type="button" data-rune-mode="ancient" aria-pressed="false">Ancient</button>
-          </div>
-        </div>
-        <div class="category-picker" aria-label="Filter by stat category">
-          <button class="category-button is-active" type="button" data-category="all" aria-pressed="true">All</button>
-          <button class="category-button" type="button" data-category="offensive" aria-pressed="false">
-            <span class="category-button__dot category-button__dot--offensive" aria-hidden="true"></span>Offensive
-          </button>
-          <button class="category-button" type="button" data-category="defensive" aria-pressed="false">
-            <span class="category-button__dot category-button__dot--defensive" aria-hidden="true"></span>Defensive
-          </button>
-          <button class="category-button" type="button" data-category="uncategorised" aria-pressed="false" hidden>
-            <span class="category-button__dot category-button__dot--uncategorised" aria-hidden="true"></span>Uncategorised
-          </button>
-        </div>
-        <label class="search">
-          <span class="sr-only">Filter stats</span>
-          <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18">
-            <path d="m21 21-4.35-4.35m2.35-5.15a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-          <input id="stat-filter" type="search" placeholder="Find a stat&hellip;" autocomplete="off">
-        </label>
-      </div>
-    </section>
+    <nav class="view-switcher" aria-label="Calculator view">
+      <button class="view-button is-active" type="button" data-view="evaluation" aria-pressed="true">Rune Evaluation</button>
+      <button class="view-button" type="button" data-view="reference" aria-pressed="false">Stat Reference</button>
+    </nav>
 
-    <p class="category-status" id="category-status">Reading stat definitions from rune_info.js&hellip;</p>
-
-    <section class="roll-analyzer" aria-labelledby="roll-analyzer-title">
+    <section class="view-panel" data-view-panel="evaluation">
+      <section class="roll-analyzer" aria-labelledby="roll-analyzer-title">
       <div class="roll-analyzer__header">
         <div class="roll-analyzer__intro">
           <p class="eyebrow eyebrow--dark">Rune evaluation</p>
@@ -83,6 +52,10 @@
             <button class="rune-mode-button" type="button" data-analyzer-mode="ancient" aria-pressed="false">Ancient</button>
           </div>
         </div>
+        <div class="analyzer-actions" aria-label="Evaluation actions">
+          <button class="secondary-button" id="reset-auto" type="button">Return all to Auto</button>
+          <button class="secondary-button secondary-button--danger" id="reset-all" type="button">Reset all</button>
+        </div>
       </div>
       <p class="inference-summary" id="inference-summary">Auto stage detection prefers three total rolls and resolves overlaps toward the lower stage.</p>
       <div class="inference-error" id="inference-error" role="alert" hidden>
@@ -92,6 +65,24 @@
           <p id="inference-error-message">Review the entered values or manually selected stages.</p>
         </div>
       </div>
+      <section class="inference-dashboard" aria-label="Stage inference summary">
+        <div class="roll-total">
+          <span class="dashboard-label">Inferred total</span>
+          <strong><span id="roll-total-value">0</span><small> / 4 rolls</small></strong>
+          <div class="roll-total__segments" id="roll-total-segments" aria-hidden="true">
+            <i></i><i></i><i></i><i></i>
+          </div>
+        </div>
+        <div class="confidence-card">
+          <span class="dashboard-label">Inference confidence</span>
+          <strong id="confidence-label">Incomplete</strong>
+          <p id="confidence-detail">Add four valid stats for a combined stage estimate.</p>
+        </div>
+        <div class="alternatives-card" id="alternatives-card">
+          <span class="dashboard-label">Alternative combinations</span>
+          <div id="alternatives-list"><p>No alternatives available yet.</p></div>
+        </div>
+      </section>
       <div class="analyzer-slots" id="analyzer-slots" aria-live="polite"></div>
       <aside class="overall-evaluation" aria-labelledby="overall-evaluation-title">
         <div class="overall-evaluation__summary">
@@ -113,19 +104,47 @@
           <span id="overall-count">0 of 4 stats</span>
         </div>
       </aside>
+      </section>
     </section>
 
-    <section class="stat-grid" id="stat-grid" aria-live="polite"></section>
-
-    <p class="empty-state" id="empty-state" hidden>No stats match your search.</p>
-
-    <aside class="calculation-note">
-      <div class="calculation-note__icon" aria-hidden="true">i</div>
-      <div>
-        <h2>How the average is calculated</h2>
-        <p>The single-roll midpoint is calculated first and rounded down: <strong>floor((minimum + maximum) &divide; 2)</strong>. That whole number is then multiplied by the number of rolls.</p>
-      </div>
-    </aside>
+    <section class="view-panel" data-view-panel="reference" hidden>
+      <section class="toolbar" aria-label="Calculator controls">
+        <div>
+          <p class="toolbar__label">Stats overview</p>
+          <p class="toolbar__count" id="visible-count">Loading stats&hellip;</p>
+        </div>
+        <div class="toolbar__controls">
+          <div class="rune-mode-picker" role="group" aria-label="Select rune type">
+            <span class="rune-mode-picker__label">Rune type</span>
+            <div class="rune-mode-picker__buttons">
+              <button class="rune-mode-button is-active" type="button" data-rune-mode="normal" aria-pressed="true">Normal</button>
+              <button class="rune-mode-button" type="button" data-rune-mode="ancient" aria-pressed="false">Ancient</button>
+            </div>
+          </div>
+          <div class="category-picker" aria-label="Filter by stat category">
+            <button class="category-button is-active" type="button" data-category="all" aria-pressed="true">All</button>
+            <button class="category-button" type="button" data-category="offensive" aria-pressed="false"><span class="category-button__dot category-button__dot--offensive" aria-hidden="true"></span>Offensive</button>
+            <button class="category-button" type="button" data-category="defensive" aria-pressed="false"><span class="category-button__dot category-button__dot--defensive" aria-hidden="true"></span>Defensive</button>
+            <button class="category-button" type="button" data-category="uncategorised" aria-pressed="false" hidden><span class="category-button__dot category-button__dot--uncategorised" aria-hidden="true"></span>Uncategorised</button>
+          </div>
+          <label class="search">
+            <span class="sr-only">Filter stats</span>
+            <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><path d="m21 21-4.35-4.35m2.35-5.15a7.5 7.5 0 1 1-15 0 7.5 7.5 0 0 1 15 0Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+            <input id="stat-filter" type="search" placeholder="Find a stat&hellip;" autocomplete="off">
+          </label>
+        </div>
+      </section>
+      <p class="category-status" id="category-status">Reading stat definitions from rune_info.js&hellip;</p>
+      <section class="stat-grid" id="stat-grid" aria-live="polite"></section>
+      <p class="empty-state" id="empty-state" hidden>No stats match your search.</p>
+      <aside class="calculation-note">
+        <div class="calculation-note__icon" aria-hidden="true">i</div>
+        <div>
+          <h2>How the average is calculated</h2>
+          <p>The single-roll midpoint is calculated first and rounded down: <strong>floor((minimum + maximum) &divide; 2)</strong>. That whole number is then multiplied by the number of rolls.</p>
+        </div>
+      </aside>
+    </section>
   </main>
 
   <footer>
