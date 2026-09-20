@@ -44,12 +44,3 @@ Category = Offensive, Defensive
 ## Run locally
 
 Open `index.html` directly in a browser. The data file uses JavaScript so it can load without a localhost server. No build step is required.
-
-## Deploy to GitHub Pages
-
-1. Push these files to a GitHub repository.
-2. Open **Settings → Pages** in the repository.
-3. Under **Build and deployment**, choose **Deploy from a branch**.
-4. Select your default branch and the `/ (root)` folder, then save.
-
-The site uses relative file paths and will work from both a repository subpath and a custom domain.
