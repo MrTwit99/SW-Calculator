@@ -12,7 +12,7 @@ Automatic stage detection evaluates every roll stage whose range contains the en
 
 If the minimum feasible stages require more than four total rolls, the analyzer displays an impossible-combination warning and blocks the Overall Rune Evaluation. Individual stat results remain visible so the conflicting values or manual stages can be corrected.
 
-The Overall Rune Evaluation is the equally weighted average of all valid selected stat quality scores, rounded down to a whole percentage. If a selected stat is invalid, the interface marks the result as partial and excludes that stat until corrected.
+The Overall Rune Evaluation is a roll-weighted average of all valid selected stat quality scores, rounded down to a whole percentage. A Base stat has weight 1, and every additional roll adds 1 to its weight, so the weights run from 1 at Base through 5 at four rolls. The calculation is `floor(sum(quality score * weight) / sum(weights))`. This gives stats receiving more rune rolls proportionally more influence. If a selected stat is invalid, the interface marks the result as partial and excludes that stat until corrected.
 
 The inference dashboard shows the selected combination's total rolls, confidence, and up to three alternative valid combinations. Alternatives are selectable: loading one applies its stages to all four cards as manual choices, preserves the other available alternatives, and places the previously active combination back into the list. Each stat explains whether its stage was inferred automatically or selected manually and why that stage was used. Per-stat reset, Return all to Auto, and Reset all controls are provided.
 

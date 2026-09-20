@@ -196,11 +196,15 @@ function qualityLabel(score) {
 function updateOverallEvaluation() {
   const slots = [...document.querySelectorAll(".analyzer-card")];
   const selectedCount = slots.filter(slot => analyzerElements(slot).statSelect.value !== "").length;
-  const validScores = slots
-    .map(slot => Number(slot.dataset.qualityScore))
-    .filter(score => Number.isFinite(score));
+  const validResults = slots
+    .map(slot => ({
+      score: Number(slot.dataset.qualityScore),
+      weight: Number(slot.dataset.qualityWeight)
+    }))
+    .filter(result => Number.isFinite(result.score)
+      && Number.isSafeInteger(result.weight) && result.weight >= 1);
 
-  overallCount.textContent = `${validScores.length} of ${ANALYZER_SLOT_COUNT} stats`;
+  overallCount.textContent = `${validResults.length} of ${ANALYZER_SLOT_COUNT} stats`;
 
   if (inferenceBlocked) {
     overallScore.textContent = "—";
@@ -213,7 +217,7 @@ function updateOverallEvaluation() {
     return;
   }
 
-  if (validScores.length === 0) {
+  if (validResults.length === 0) {
     overallScore.textContent = "—";
     overallGrade.textContent = "Not rated";
     overallGrade.dataset.rated = "false";
@@ -226,7 +230,10 @@ function updateOverallEvaluation() {
     return;
   }
 
-  const score = Math.floor(validScores.reduce((sum, value) => sum + value, 0) / validScores.length);
+  const totalWeight = validResults.reduce((sum, result) => sum + result.weight, 0);
+  const weightedScoreTotal = validResults.reduce((sum, result) =>
+    sum + (result.score * result.weight), 0);
+  const score = Math.floor(weightedScoreTotal / totalWeight);
   overallScore.textContent = `${score}%`;
   overallGrade.textContent = qualityLabel(score);
   overallGrade.dataset.rated = "true";
@@ -234,10 +241,10 @@ function updateOverallEvaluation() {
   overallBarMarker.style.left = `${score}%`;
   overallBar.setAttribute("aria-valuenow", String(score));
 
-  const invalidSelectedCount = selectedCount - validScores.length;
+  const invalidSelectedCount = selectedCount - validResults.length;
   overallContext.textContent = invalidSelectedCount > 0
-    ? `Partial evaluation: ${invalidSelectedCount} selected ${invalidSelectedCount === 1 ? "stat needs" : "stats need"} a valid value.`
-    : `Equal-weight average of ${validScores.length} valid ${validScores.length === 1 ? "stat" : "stats"}, rounded down.`;
+    ? `Partial roll-weighted evaluation: ${invalidSelectedCount} selected ${invalidSelectedCount === 1 ? "stat needs" : "stats need"} a valid value.`
+    : `Roll-weighted average of ${validResults.length} valid ${validResults.length === 1 ? "stat" : "stats"}: Base weighs 1, plus 1 for each roll. Rounded down.`;
 }
 
 function createAnalyzerSlot(slotIndex) {
@@ -584,6 +591,7 @@ function updateAnalyzerSlot(slot, inferredStage) {
   autoOption.textContent = !stat ? "Auto · Base" : stage ? `Auto · ${stage.label}` : "Auto · No match";
   elements.error.hidden = true;
   delete slot.dataset.qualityScore;
+  delete slot.dataset.qualityWeight;
   slot.classList.toggle("is-empty", !stat);
   elements.stageMode.textContent = isAuto ? "Auto" : "Manual";
   elements.stageMode.classList.toggle("is-manual", !isAuto);
@@ -660,6 +668,7 @@ function updateAnalyzerSlot(slot, inferredStage) {
   elements.slider.value = String(actual);
   elements.actual.textContent = `Actual ${actual}${stat.unit}`;
   slot.dataset.qualityScore = String(score);
+  slot.dataset.qualityWeight = String(multiplier);
 }
 
 function initializeAnalyzerSlots() {
